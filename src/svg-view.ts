@@ -353,7 +353,7 @@ export class SVGView extends LitElement implements FileAccessCompatible {
         ? html`<fieldset>
             <button type=button @click=${() => this._select(null)} ?disabled=${
             this._selection === null
-          }>Очистити вибір</button>
+          }>Очистити вибір${this._selection ? `: ${this.getSelector(this._selection)}` : ``}</button>
             <button ?disabled=${!!!this.svgcontent} @click=${() => {
             if (this.aspect === ALBUM) {
               this.aspect = PORTRAIT;
