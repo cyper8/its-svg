@@ -5,7 +5,8 @@ import buttonStyling from './button.css.js';
 @customElement('file-export')
 export class FileExport extends LitElement {
   @property({ type: Object, attribute: false }) file?: File;
-  @property({ type: String }) label: string = 'Save';
+  @property({ type: Boolean }) disabled: boolean = false;
+  @property({ type: String }) label: string = 'Зберегти';
 
   static styles = [
     buttonStyling(),
@@ -48,11 +49,9 @@ export class FileExport extends LitElement {
 
   render() {
     return html`
-      <label role="button" class="button" ?disabled=${!this.file} @mousedown="${
-      this._download
-    }" @mouseup="${this._download}">${this.label} ${
-      this.file?.name || ''
-    }</label>
+      <label role="button" class="button" ?disabled=${!this.file || this.disabled} @mousedown="${this._download
+      }" @mouseup="${this._download}">${this.label} ${this.file?.name || ''
+      }</label>
     `;
   }
 }

@@ -54,15 +54,14 @@ export class FileAccessor {
   write(content: string | ArrayBuffer | DataView | Blob) {
     let name = this.file.name;
     let type = this.file.type;
-    let file = new File([content], name, { type });
-    Promise.all([this.hash, FileAccessor.hash(file)]).then(([_old, _new]) => {
+    let file = this.file = new File([content], name, { type });
+    return Promise.all([this.hash, FileAccessor.hash(file)]).then(([_old, _new]) => {
       if (_old !== _new) {
         this.changed = true;
       } else {
         this.changed = false;
       }
-      this.hash = Promise.resolve(_new);
+      return this.hash = Promise.resolve(_new);
     });
-    return (this.file = file);
   }
 }

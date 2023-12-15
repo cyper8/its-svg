@@ -1,4 +1,4 @@
-import { LitElement, PropertyValues, css, html } from 'lit';
+import { LitElement, PropertyValues, css, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import './file-import.js';
@@ -37,8 +37,10 @@ export class FileAccess extends LitElement {
     let target = slot || this.shadowRoot?.querySelector('slot');
     if (target instanceof HTMLSlotElement) {
       target.assignedElements({ flatten: true }).forEach((e) => {
-        if ('fileAccessor' in e)
+        if ('fileAccessor' in e) {
           (e as FileAccessCompatible).fileAccessor = accessor;
+          (e as FileAccessCompatible).addEventListener('file-changed', this._handleFileChange.bind(this));
+        }
         console.log(`handed file access to ${e}`);
       });
     }
@@ -53,6 +55,22 @@ export class FileAccess extends LitElement {
     }
   }
 
+  private _handleFileChange(e: FileChangeEvent) {
+    console.log('file change');
+    if (this.accessor) {
+      this.accessor.write(e.detail.content).then(() => this.changed = this.accessor?.changed || false);
+    } else {
+      this.accessor = new FileAccessor(
+        new File(
+          [e.detail.content],
+          e.detail.name || 'unnamed',
+          e.detail.options
+        )
+      );
+      this.changed = false;
+    }
+  }
+
   updated(_changed: PropertyValues<FileAccess>) {
     if (_changed.has('accessor')) {
       this._distribute(this.accessor);
@@ -62,27 +80,14 @@ export class FileAccess extends LitElement {
   render() {
     return html`<div class="panel">
      <file-import type="${this.type}" @fileready="${(e: ImportEvent) => {
-      this.accessor = new FileAccessor(e.detail.file);
-    }}" @filecleared="${() => {
-      this.accessor = undefined;
-    }}"></file-import>
-    <file-export .file=${this.accessor?.file}></file-export>
+        this.accessor = new FileAccessor(e.detail.file);
+      }}" @filecleared="${() => {
+        this.accessor = undefined;
+      }}"></file-import>
+      ${this.accessor
+        ? html`<file-export ?disabled=${!(this.changed)} .file=${this.accessor.file}></file-export>`
+        : nothing}
     </div>
-    <slot @slotchange="${this.__giveout}" @file-changed=${(
-      e: FileChangeEvent
-    ) => {
-      if (this.accessor) {
-        this.accessor.write(e.detail.content);
-      } else {
-        this.accessor = new FileAccessor(
-          new File(
-            [e.detail.content],
-            e.detail.name || 'unnamed',
-            e.detail.options
-          )
-        );
-      }
-      this.requestUpdate();
-    }}></slot>`;
+    <slot @slotchange="${this.__giveout}"></slot>`;
   }
 }
