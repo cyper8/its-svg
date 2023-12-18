@@ -8,6 +8,7 @@ import {
   FileChangeEvent,
   FileChangeResult,
 } from './FileAccessor.js';
+import { ruller } from './svg-scale-ruller.js';
 
 const xmlns = 'http://www.w3.org/2000/svg';
 
@@ -124,10 +125,11 @@ export class SVGView extends LitElement implements FileAccessCompatible {
   ];
 
   private _over(e: MouseEvent) {
+    e.preventDefault();
     if (this.svgcontent) {
+      let target = e.target;
       this._mx = e.offsetX;
       this._my = e.offsetY;
-      let target = e.target;
       if (
         target instanceof SVGElement &&
         !target.classList.contains('grid') &&
@@ -150,8 +152,8 @@ export class SVGView extends LitElement implements FileAccessCompatible {
         let deltaY =
           e.movementX * Math.sin(-this._r * (Math.PI / 180)) +
           e.movementY * Math.cos(this._r * (Math.PI / 180));
-        this._x += deltaX;
-        this._y += deltaY;
+        this._x += (deltaX / this._factor);
+        this._y += (deltaY / this._factor);
       }
     }
   }
@@ -165,6 +167,7 @@ export class SVGView extends LitElement implements FileAccessCompatible {
   }
 
   private _press(_e: Event) {
+    _e.preventDefault();
     this._mouse = 'select';
   }
 
@@ -250,7 +253,7 @@ export class SVGView extends LitElement implements FileAccessCompatible {
     }
   }
 
-  private _unwrap(content: string): string {
+  private _unwrap(content: string) {
     const ROTATION = SVGTransform.SVG_TRANSFORM_ROTATE;
     const TRANSLATION = SVGTransform.SVG_TRANSFORM_TRANSLATE;
     const SCALING = SVGTransform.SVG_TRANSFORM_SCALE;
@@ -258,99 +261,65 @@ export class SVGView extends LitElement implements FileAccessCompatible {
     this._factor = 1;
     this._x = 0;
     this._y = 0;
-    if (content.includes('itssvg')) {
-      let temp = document.createElement('div');
-      //temp.style.display = 'none';
-      //this.appendChild(temp);
-      temp.innerHTML = content;
-      let gcontent = temp.querySelector('g#content');
-      if (gcontent instanceof SVGGElement) {
-        for (const op of gcontent.transform.baseVal) {
-          switch (op.type) {
-            case ROTATION:
-              this._r = op.angle;
-              break;
-            case SCALING:
-              this._factor = op.matrix.a || op.matrix.d;
-              break;
-            case TRANSLATION:
-              this._x = op.matrix.e;
-              this._y = op.matrix.f;
-            default:
+    let temp = document.createElement('div');
+    temp.innerHTML = content;
+    let gcontent = temp.querySelector('g#content.itssvg');
+    if (gcontent instanceof SVGGElement) { // get shift, angle and scale from wrapper if any
+      for (const op of gcontent.transform.baseVal) {
+        switch (op.type) {
+          case ROTATION:
+            this._r = op.angle;
+            break;
+          case SCALING:
+            this._factor = op.matrix.a || op.matrix.d;
+            break;
+          case TRANSLATION:
+            this._x = op.matrix.e;
+            this._y = op.matrix.f;
+          default:
 
-          }
         }
       }
-      let gridscale = temp.querySelector('text#gridscale');
-      if (gridscale instanceof SVGTextElement) {
-        let grid = gridscale.textContent || '';
-        this.gridscale = parseInt(grid);
-        if (this.gridscale) {
-          this.gridunit = grid.includes('км') ? 'км' : 'м';
-        }
-      }
-      return gcontent?.innerHTML || content;
-      //this.removeChild(temp);
     }
-    return content;
+    let gridscale = temp.querySelector('#ruller text#gridscale');
+    if (gridscale instanceof SVGTextElement) { // get grid value and unit if any
+      let grid = gridscale.textContent || '';
+      this.gridscale = parseInt(grid);
+      if (this.gridscale) {
+        this.gridunit = grid.includes('км') ? 'км' : 'м';
+      }
+    }
+    return gcontent?.innerHTML || content;
+
   }
 
   private _wrap(content: string, width: number, height: number) {
-    return html`<svg 
+    return html`
+    <svg 
     id="container"
     style="aspect-ratio: ${this.aspect}"
     class="itssvg"
     viewBox="0 0 ${width} ${height}"
     xmlns="${xmlns}">
-    <style>
-      #ruller-path {
-        stroke: black;
-        stroke-width: 1px;
-        fill: none;
-      }
-
-      .scale-text {
-        text-anchor: middle;
-        font-family: sans-serif;
-        font-size: 10pt;
-        fill: #000;
-        stroke: none;
-      }
-
-      #content {
-        transform-origin: center center;
-      }
-    </style>
-    <symbol id="ruller" viewBox="0 0 250 25" width="250" height="25">
-      <rect id="ruller-bg" stroke="none" fill="rgba(255,255,255,0.5)" width="250" height="25"></rect>
-      <path id="ruller-path" stroke="#000" stroke-width="1px" fill="none" d="M 25,15 l 0,5 l 200,0 l 0,-5 m -50,0 l 0,5 m -50,0 l 0,-5 m -50,0 l 0,5" />
-      <text class="scale-text" x="25" y="14">${0}</text>
-      <text class="scale-text" x="75" y="14">${this.gridscale / 4
-      }</text>
-      <text class="scale-text" x="125" y="14">${this.gridscale / 2
-      }</text>
-      <text class="scale-text" x="175" y="14">${this.gridscale * (3 / 4)
-      }</text>
-      <text id="gridscale" class="scale-text" x="225" y="14">${this.gridscale + this.gridunit
-      }</text>
-    </symbol>
+    
     <!--// CONTENT //-->
     <g class="itssvg" id="content" style="transform-origin: center center"
-    transform="translate(${this._x / this._factor} ${this._y / this._factor}) scale(${this._factor}) rotate(${this._r})">
+    transform="scale(${this._factor}) rotate(${this._r}) translate(${this._x} ${this._y})">
       ${unsafeSVG(content)}
     </g>
     
+    ${ruller(this.gridunit, this.gridscale)}
     ${this.gridscale
-        ? svg`<use id="ruller" href="#ruller" x="${this._ref ? this._mx - 24 : width * 0.05
+        ? svg`<use href="#ruller" x="${this._ref ? this._mx - 24 : width * 0.05
           }" y="${this._ref ? this._my : height - 25}" width="${width / 3.3
           }"/>`
         : nothing
       }
-  </svg>`;
+    </svg>`
   }
 
   render() {
-    let clipW = Math.round(this.clientWidth * 0.9),
+    let clipW = Math.round(this.clientWidth),
       clipH = Math.round(clipW / this.aspect);
     return html`
     ${this.svgcontent
