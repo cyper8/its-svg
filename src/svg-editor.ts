@@ -1,10 +1,8 @@
 import { customElement, property, state } from "lit/decorators.js";
 import { SVGView } from "./svg-view.js";
 import { unsafeSVG } from "lit/directives/unsafe-svg.js";
-import { PropertyValueMap, css, html, nothing, svg } from "lit";
+import { PropertyValueMap, TemplateResult, css, html, nothing, svg } from "lit";
 import { FileChangeResult, FileChangeEvent } from "./FileAccessor.js";
-import baseCss from "./base.css.js";
-import buttonCss from "./button.css.js";
 
 const ALBUM = 297 / 210;
 const PORTRAIT = 210 / 297;
@@ -13,23 +11,24 @@ const PORTRAIT = 210 / 297;
 export class SVGEditor extends SVGView {
   protected _mouse: 'move' | 'none' = 'none';
 
-  @state() private _factor: number = 1;
-  @state() private _x: number = 0;
-  @state() private _y: number = 0;
-  @state() private _r: number = 0;
+  @state() _factor: number = 1;
+  @state() _x: number = 0;
+  @state() _y: number = 0;
+  @state() _r: number = 0;
   @property({ type: Number }) gridscale: number = 0;
   @property({ type: String }) gridunit: string = 'м';
   @property({ type: Boolean }) measure: boolean = false;
 
   static styles = [
-    baseCss(),
-    buttonCss(),
+    ...super.styles,
     css`
-      #content {
-        display: block;
-      }
+    fieldset {
+      display: inline-block; 
+      font-size: 0.8em;
+      padding: 0.3em;
+    }
     `
-  ]
+  ];
 
   protected _over(e: MouseEvent) {
     e.preventDefault();
@@ -50,11 +49,11 @@ export class SVGEditor extends SVGView {
         let ruller = canvas.querySelector('use#use-ruller');
         if (ruller instanceof SVGUseElement) {
           if (e.ctrlKey) {
-            ruller.setAttribute('x', e.offsetX + '');
-            ruller.setAttribute('y', e.offsetY + '');
+            ruller.setAttribute('x', e.offsetX-canvas.offsetLeft-25 + '');
+            ruller.setAttribute('y', e.offsetY-canvas.offsetTop + '');
           } else {
             ruller.setAttribute('x', '0');
-            ruller.setAttribute('y', '0');
+            ruller.setAttribute('y', canvas.clientHeight-50+'');
           }
         }
       }
@@ -67,14 +66,14 @@ export class SVGEditor extends SVGView {
     if (canvas instanceof HTMLDivElement) {
       if (this._mouse !== 'none') return;
       if (this.svgcontent) {
+        let UP = event.deltaY > 0 ? -1 : 1;
         if (event.shiftKey) {
           // ROTATE
-          let deltaR = (event.shiftKey ? 1 : 5) * (event.deltaY > 0 ? -1 : 1);
+          let deltaR = (event.ctrlKey ? 1 : 5) * (UP);
           let r = this._r + deltaR;
           this._r = r;
         } else {
           // SCALE
-          let UP = event.deltaY > 0 ? 1 : -1;
           this._factor = this._factor + (UP * (event.ctrlKey ? 0.005 : 0.05));
         }
       }
@@ -82,11 +81,13 @@ export class SVGEditor extends SVGView {
   }
 
 
-  protected _wrapEditor(content: string, factor: number, angle: number, x: number, y: number) {
-    return `<g class="itssvg" id="content" style="transform-origin: center center"
-    transform="scale(${factor}) rotate(${angle}) translate(${x} ${y})">
-      ${content}
-    </g>`
+  protected _wrapEditor(content: string | TemplateResult, factor: number, angle: number, x: number, y: number) {
+    return svg`<g class="itssvg" id="content" style="transform-origin: center center"
+    transform="scale(${factor}) rotate(${angle}) translate(${x} ${y})">${
+      typeof content === 'string' 
+      ? unsafeSVG(content)
+      : content
+    }</g>`
   }
 
   protected _unwrapEditor(container: Element) {
@@ -111,6 +112,7 @@ export class SVGEditor extends SVGView {
           case TRANSLATION:
             this._x = op.matrix.e;
             this._y = op.matrix.f;
+            break;
           default:
 
         }
@@ -177,13 +179,18 @@ export class SVGEditor extends SVGView {
     container.addEventListener('mousemove', this._over.bind(this));
   }
 
-  protected firstUpdated(_changedProperties: PropertyValueMap<SVGEditor> | Map<PropertyKey, unknown>): void {
+  // protected firstUpdated(_changedProperties: PropertyValueMap<SVGEditor> | Map<PropertyKey, unknown>): void {
+    
+  // }
+
+  connectedCallback(): void {
+    super.connectedCallback();
     this._initializeHandlers(this);
   }
 
-  protected _ruller(unit: string, value: number, width: number = 250) {
-    return `
-      <symbol id="ruller" viewBox="0 0 250 25" width="${width}">
+  protected _ruller(unit: string, value: number, width: number = 250, topPos: number) {
+    return svg`
+      <symbol id="ruller" viewBox="0 0 250 25">
         <style>
           #ruller-path {
             stroke: black;
@@ -211,7 +218,7 @@ export class SVGEditor extends SVGView {
           <text id="scalevalue" class="scale-text" x="225" y="14">${value} ${unit}</text>
     </symbol>
     ${value
-        ? `<use id="use-ruller" href="#ruller"/>`
+        ? svg`<use id="use-ruller" href="#ruller" width="${width}" height="${width/10}" x="0" y="${topPos}" />`
         : ''
       }
     `;
@@ -221,8 +228,6 @@ export class SVGEditor extends SVGView {
     super.updated(_changed);
     if (_changed.has('_x')
       || _changed.has('_y')
-      || _changed.has('_w')
-      || _changed.has('_h')
       || _changed.has('_r')
       || _changed.has('aspect')
       || _changed.has('gridscale')
@@ -253,18 +258,21 @@ export class SVGEditor extends SVGView {
     return wrapper;
   }
 
-  protected _wrap(content: string, width: number, height: number) {
+  protected _wrap(content: string | TemplateResult, width: number, height: number) {
     return super._wrap(
-      `${this._wrapEditor(content, this._factor, this._r, this._x, this._y)}${this._ruller(this.gridunit, this.gridscale, width / 3.3)}`,
+      svg`${
+        this._wrapEditor(content, this._factor, this._r, this._x, this._y)
+      }${
+        this._ruller(this.gridunit, this.gridscale, width / 3.3, height-50)
+      }`,
       width,
       height)
   }
 
   render() {
     return html`
-    ${this.svgcontent ? html`${this._editorControl()}` : nothing}
-    ${super.render()}
-    `
+    ${this.svgcontent ? this._editorControl() : nothing}
+    ${super.render()}`
   }
 
 }

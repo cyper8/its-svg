@@ -1,4 +1,4 @@
-import { LitElement, PropertyValueMap, PropertyValues, css, html, nothing, svg } from 'lit';
+import { LitElement, PropertyValueMap, PropertyValues, TemplateResult, css, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import buttonStyling from './button.css.js';
@@ -10,11 +10,9 @@ import {
 const xmlns = 'http://www.w3.org/2000/svg';
 
 const ALBUM = 297 / 210;
-const PORTRAIT = 210 / 297;
 
 @customElement('svg-view')
 export class SVGView extends LitElement implements FileAccessCompatible {
-
   @property({ type: Number }) aspect: number = ALBUM;
   @property({ type: Object }) fileAccessor: FileAccessor | undefined;
   @property({ type: String }) svgcontent?: string;
@@ -23,16 +21,11 @@ export class SVGView extends LitElement implements FileAccessCompatible {
     buttonStyling(),
     css`
     :host, 
-    #canvas {
+    #canvas,
+    #canvas * {
       display: block;
       position: relative;
       font-family: sans-serif;
-    }
-
-    fieldset {
-      display: inline-block; 
-      font-size: 0.8em;
-      padding: 0.3em;
     }
 
     #canvas {
@@ -42,11 +35,6 @@ export class SVGView extends LitElement implements FileAccessCompatible {
       max-height: 80vh;
       border: solid 1px black;
     }
-
-    #canvas * {
-      display: block
-    }
-
   `,
   ];
 
@@ -69,7 +57,6 @@ export class SVGView extends LitElement implements FileAccessCompatible {
         this.svgcontent = undefined;
       }
     }
-
   }
 
   protected _unwrap(content: string): Element {
@@ -83,13 +70,17 @@ export class SVGView extends LitElement implements FileAccessCompatible {
     return wrapper || svgcontent
   }
 
-  protected _wrap(content: string, width: number, height: number) {
+  protected _wrap(content: string | TemplateResult, width: number, height: number) {
     return html`<svg 
     id="container"
     class="itssvg"
     style="aspect-ratio: ${this.aspect}"
     viewBox="0 0 ${width} ${height}"
-    xmlns="${xmlns}">${unsafeSVG(content)}</svg>`
+    xmlns="${xmlns}">${
+      typeof content === 'string' 
+      ? unsafeSVG(content) 
+      : content
+    }</svg>`
   }
 
   render() {

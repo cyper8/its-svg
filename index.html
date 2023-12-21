@@ -8,11 +8,16 @@
     <link rel="stylesheet" type="text/css" href="./index.css" />
     <title>Vite + Lit + TS</title>
     <script type="module" src="/src/file-access.ts"></script>
+    <script type="module" src="/src/svg-view.ts"></script>
     <script type="module" src="/src/svg-editor.ts"></script>
+    <script type="module" src="/src/svg-selector.ts"></script>
   </head>
 
   <body>
-    <file-access type=".svg, image/svg+xml"><svg-editor></svg-editor></file-access>
+    <file-access type=".svg, image/svg+xml">
+      <svg-view></svg-view>
+      <svg-selector></svg-selector>
+    </file-access>
   </body>
 
 </html>
