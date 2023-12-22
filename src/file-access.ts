@@ -1,5 +1,5 @@
 import { LitElement, PropertyValues, css, html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 
 import './file-import.js';
 import './file-export.js';
@@ -12,10 +12,13 @@ import {
 
 @customElement('file-access')
 export class FileAccess extends LitElement {
-  @property({ type: Object }) accessor?: FileAccessor;
-  @property({ type: Boolean }) changed: boolean = false;
+  @state() accessor?: FileAccessor;
+  @property({ type: Boolean }) disabled: boolean = false;
+  @property({ type: Boolean, attribute: true }) readonly: boolean = false;
+  @property({ type: Boolean, reflect: true }) changed: boolean = false;
   @property({ type: String, attribute: 'type' }) type: string =
     '.txt, text/plain';
+  @property({ type: String, reflect: true, attribute: 'file-name' }) fileName: string = '';
 
   static get styles() {
     return css`
@@ -56,35 +59,42 @@ export class FileAccess extends LitElement {
   }
 
   private _handleFileChange(e: FileChangeEvent) {
+    if (this.readonly) return;
     console.log('file change');
     if (this.accessor) {
       this.accessor.write(e.detail.content).then(() => this.changed = this.accessor?.changed || false);
     } else {
-      this.accessor = new FileAccessor(
-        new File(
-          [e.detail.content],
-          e.detail.name || 'unnamed',
-          e.detail.options
-        )
-      );
-      this.changed = false;
+      let name;
+      if (name = prompt('Створюємо новий файл? Введіть назву:', 'unnamed')) {
+        this.accessor = new FileAccessor(
+          new File(
+            [e.detail.content],
+            name,
+            e.detail.options || { type: this.type }
+          )
+        );
+        this.changed = false;
+      }
     }
   }
 
   updated(_changed: PropertyValues<FileAccess>) {
     if (_changed.has('accessor')) {
+      this.fileName = this.accessor?.file.name || '';
       this._distribute(this.accessor);
     }
   }
 
   render() {
     return html`<div class="panel">
-     <file-import type="${this.type}" @fileready="${(e: ImportEvent) => {
+     <file-import ?disabled="${this.disabled}" type="${this.type}" @fileready="${(e: ImportEvent) => {
+        this.disabled = true;
         this.accessor = new FileAccessor(e.detail.file);
+        this.accessor.hash.then(() => { this.disabled = false });
       }}" @filecleared="${() => {
         this.accessor = undefined;
       }}"></file-import>
-      ${this.accessor
+      ${this.accessor && !this.readonly
         ? html`<file-export ?disabled=${!(this.changed)} .file=${this.accessor.file}></file-export>`
         : nothing}
     </div>
