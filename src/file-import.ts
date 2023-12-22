@@ -18,19 +18,18 @@ type FileImportEventMap = HTMLElementEventMap & {
 
 @customElement('file-import')
 export class FileImport extends LitElement {
+  @property({ type: Boolean, attribute: true, reflect: true }) disabled: boolean = false;
   @property({ type: Object, attribute: false }) file?: File;
   @property({ type: String }) type: string = '.txt, text/plain';
 
   render() {
     return html`
-      <input id="open-file" @change=${this._fileSelected} type=file accept="${
-      this.type
-    }" />
-        ${
-          this.file
-            ? html`<label class="button delete" role="button" alt="Clear" @click=${this._clearFile}>${this.file.name}${clearFileIcon}</label>`
-            : html`<label role="button" class="button add" for="open-file">${newFileIcon}Файл</label>`
-        }
+      <input id="open-file" ?disabled="${this.disabled}" @change=${this._fileSelected} type=file accept="${this.type
+      }" />
+        ${this.file
+        ? html`<label class="button delete" ?disabled="${this.disabled}" role="button" alt="Clear" @click=${this._clearFile}>${this.file.name}${clearFileIcon}</label>`
+        : html`<label role="button" ?disabled="${this.disabled}" class="button add" for="open-file">${newFileIcon}Файл</label>`
+      }
     `;
   }
 
