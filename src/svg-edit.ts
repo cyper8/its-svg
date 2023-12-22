@@ -173,18 +173,10 @@ export class SVGEdit extends SVGView {
   </fieldset>`
   }
 
-  protected _initializeHandlers(container: HTMLElement) {
-    container.addEventListener('wheel', this._scale.bind(this));
-    container.addEventListener('mousemove', this._over.bind(this));
-  }
-
-  // protected firstUpdated(_changedProperties: PropertyValueMap<SVGEditor> | Map<PropertyKey, unknown>): void {
-
-  // }
-
   connectedCallback(): void {
     super.connectedCallback();
-    this._initializeHandlers(this);
+    this.addEventListener('wheel', this._scale.bind(this));
+    this.addEventListener('mousemove', this._over.bind(this));
   }
 
   protected _ruller(unit: string, value: number, width: number = 250, topPos: number) {

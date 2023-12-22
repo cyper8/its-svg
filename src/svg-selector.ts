@@ -1,5 +1,5 @@
 import { customElement, property, state } from "lit/decorators.js";
-import { SVGView } from "./svg-view";
+import { SVGView } from "./svg-view.js";
 import { PropertyValueMap, TemplateResult, css, html, nothing } from "lit";
 
 export type SVGSelectionResult = {
@@ -22,7 +22,7 @@ export const getSelector = (element: Element | SVGElement) =>
 @customElement('svg-selector')
 export class SVGSelector extends SVGView {
   protected _mouse: 'select' | 'none' = 'none';
-  @property({type: Object}) selection: Element | null = null;
+  @property({ type: Object }) selection: Element | null = null;
   @state() _hovered: SVGElement | null = null;
   @state() _mx: number = 0;
   @state() _my: number = 0;
@@ -68,10 +68,10 @@ export class SVGSelector extends SVGView {
   ];
 
   get result(): SVGSelectionResult {
-      return {
-        element: this.selection ? getSelector(this.selection) : undefined,
-        result: this.selection?.outerHTML || undefined,
-      };
+    return {
+      element: this.selection ? getSelector(this.selection) : undefined,
+      result: this.selection?.outerHTML || undefined,
+    };
   }
 
   protected _over(e: Event) {
@@ -126,7 +126,7 @@ export class SVGSelector extends SVGView {
 
   protected _clearSelectionControl(selection: string = '') {
     return html`<fieldset><button type=button @click=${() => this._select(null)} ?disabled=${selection === ''
-      }>Очистити вибір${selection}</button></fieldset>`
+      }>Очистити вибір: ${selection}</button></fieldset>`
   }
 
   connectedCallback(): void {
@@ -140,6 +140,7 @@ export class SVGSelector extends SVGView {
   }
 
   protected updated(_changed: PropertyValueMap<SVGSelector>): void {
+    super.updated(_changed);
     if (_changed.has('selection')) {
       this.dispatchEvent((new CustomEvent<SVGSelectionResult>('svg-selection-changed', {
         composed: true,
