@@ -7,8 +7,8 @@ import { FileChangeResult, FileChangeEvent } from "./FileAccessor.js";
 const ALBUM = 297 / 210;
 const PORTRAIT = 210 / 297;
 
-@customElement('svg-editor')
-export class SVGEditor extends SVGView {
+@customElement('svg-edit')
+export class SVGEdit extends SVGView {
   protected _mouse: 'move' | 'none' = 'none';
 
   @state() _factor: number = 1;
@@ -49,11 +49,11 @@ export class SVGEditor extends SVGView {
         let ruller = canvas.querySelector('use#use-ruller');
         if (ruller instanceof SVGUseElement) {
           if (e.ctrlKey) {
-            ruller.setAttribute('x', e.offsetX-canvas.offsetLeft-25 + '');
-            ruller.setAttribute('y', e.offsetY-canvas.offsetTop + '');
+            ruller.setAttribute('x', e.offsetX - canvas.offsetLeft - 25 + '');
+            ruller.setAttribute('y', e.offsetY - canvas.offsetTop + '');
           } else {
             ruller.setAttribute('x', '0');
-            ruller.setAttribute('y', canvas.clientHeight-50+'');
+            ruller.setAttribute('y', canvas.clientHeight - 50 + '');
           }
         }
       }
@@ -83,11 +83,10 @@ export class SVGEditor extends SVGView {
 
   protected _wrapEditor(content: string | TemplateResult, factor: number, angle: number, x: number, y: number) {
     return svg`<g class="itssvg" id="content" style="transform-origin: center center"
-    transform="scale(${factor}) rotate(${angle}) translate(${x} ${y})">${
-      typeof content === 'string' 
-      ? unsafeSVG(content)
-      : content
-    }</g>`
+    transform="scale(${factor}) rotate(${angle}) translate(${x} ${y})">${typeof content === 'string'
+        ? unsafeSVG(content)
+        : content
+      }</g>`
   }
 
   protected _unwrapEditor(container: Element) {
@@ -180,7 +179,7 @@ export class SVGEditor extends SVGView {
   }
 
   // protected firstUpdated(_changedProperties: PropertyValueMap<SVGEditor> | Map<PropertyKey, unknown>): void {
-    
+
   // }
 
   connectedCallback(): void {
@@ -218,13 +217,13 @@ export class SVGEditor extends SVGView {
           <text id="scalevalue" class="scale-text" x="225" y="14">${value} ${unit}</text>
     </symbol>
     ${value
-        ? svg`<use id="use-ruller" href="#ruller" width="${width}" height="${width/10}" x="0" y="${topPos}" />`
+        ? svg`<use id="use-ruller" href="#ruller" width="${width}" height="${width / 10}" x="0" y="${topPos}" />`
         : ''
       }
     `;
   }
 
-  protected updated(_changed: PropertyValueMap<SVGEditor>): void {
+  protected updated(_changed: PropertyValueMap<SVGEdit>): void {
     super.updated(_changed);
     if (_changed.has('_x')
       || _changed.has('_y')
@@ -260,11 +259,9 @@ export class SVGEditor extends SVGView {
 
   protected _wrap(content: string | TemplateResult, width: number, height: number) {
     return super._wrap(
-      svg`${
-        this._wrapEditor(content, this._factor, this._r, this._x, this._y)
-      }${
-        this._ruller(this.gridunit, this.gridscale, width / 3.3, height-50)
-      }`,
+      svg`${this._wrapEditor(content, this._factor, this._r, this._x, this._y)
+        }${this._ruller(this.gridunit, this.gridscale, width / 3.3, height - 50)
+        }`,
       width,
       height)
   }
