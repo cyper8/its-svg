@@ -30,7 +30,7 @@ export class SVGEdit extends SVGView {
     `
   ];
 
-  protected _over(e: MouseEvent) {
+  protected _move(e: MouseEvent) {
     e.preventDefault();
     let canvas = this.shadowRoot?.querySelector('div#canvas');
     if (canvas instanceof HTMLDivElement) {
@@ -176,7 +176,7 @@ export class SVGEdit extends SVGView {
   connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('wheel', this._scale.bind(this));
-    this.addEventListener('mousemove', this._over.bind(this));
+    this.addEventListener('mousemove', this._move.bind(this));
   }
 
   protected _ruller(unit: string, value: number, width: number = 250, topPos: number) {
