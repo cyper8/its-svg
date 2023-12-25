@@ -1,14 +1,18 @@
-import { LitElement, PropertyValues, css, html, nothing } from 'lit';
+import { LitElement, css, html, nothing } from 'lit';
+import type { PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import type { ImportEvent } from './file-import.js';
+import {
+  FileAccessor,
+} from './FileAccessor.js';
+import type {
+  FileAccessCompatible,
+  FileChangeEvent,
+} from './FileAccessor.js';
 
 import './file-import.js';
 import './file-export.js';
-import { ImportEvent } from './file-import.js';
-import {
-  FileAccessCompatible,
-  FileAccessor,
-  FileChangeEvent,
-} from './FileAccessor.js';
+
 
 @customElement('file-access')
 export class FileAccess extends LitElement {

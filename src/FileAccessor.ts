@@ -9,16 +9,17 @@ export type FileChangeEvent = CustomEvent<FileChangeResult> & {
   composed: true;
 };
 
-export interface FileAccessCompatible {
-  fileAccessor: FileAccessor | undefined;
+export type FileAccessCompatible<A extends string = 'fileAccessor'> = {
+  [accessor in A]: FileAccessor | undefined;
+} & {
   addEventListener: <T extends keyof FileAccessCompatibleEventMap>(
     type: T,
     handler: (event: FileAccessCompatibleEventMap[T]) => void,
     options?: boolean | AddEventListenerOptions
   ) => void;
-}
+};
 
-export interface FileAccessCompatibleEventMap {
+export interface FileAccessCompatibleEventMap extends HTMLElementEventMap {
   'file-changed': FileChangeEvent;
 }
 
