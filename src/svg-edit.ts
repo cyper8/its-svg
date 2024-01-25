@@ -11,6 +11,8 @@ const PORTRAIT = 210 / 297;
 export class SVGEdit extends SVGView {
   protected _mouse: 'move' | 'none' = 'none';
 
+  @state() _mx: number = 0;
+  @state() _my: number = 0;
   @state() _factor: number = 1;
   @state() _x: number = 0;
   @state() _y: number = 0;
@@ -30,27 +32,39 @@ export class SVGEdit extends SVGView {
     `
   ];
 
+  svgCanvas = () => this.shadowRoot?.querySelector<HTMLElement>('svg#container.itssvg');
+
+  translateSystem([x, y]: [number, number]): [number, number] {
+    let _x = x / this._factor,
+      _y = y / this._factor;
+    return [
+      (_x * Math.cos(-this._r * (Math.PI / 180))) + (_y * Math.sin(this._r * (Math.PI / 180))) + this._x,
+      (_x * Math.sin(-this._r * (Math.PI / 180))) + (_y * Math.cos(this._r * (Math.PI / 180))) + this._y
+    ]
+  }
+
+  protected _translate(tx: number, ty: number) {
+    [this._x, this._y] = this.translateSystem([tx, ty]);
+  }
+
   protected _move(e: MouseEvent) {
     e.preventDefault();
-    let canvas = this.shadowRoot?.querySelector('div#canvas');
-    if (canvas instanceof HTMLDivElement) {
+    let oldX = this._mx,
+      oldY = this._my;
+    this._mx = e.offsetX;
+    this._my = e.offsetY;
+    let canvas = e.currentTarget;
+    if (canvas instanceof SVGSVGElement) {
       if (e.buttons === 1) {
         this._mouse = 'move';
-        let deltaX =
-          e.movementX * Math.cos(-this._r * (Math.PI / 180)) +
-          e.movementY * Math.sin(this._r * (Math.PI / 180));
-        let deltaY =
-          e.movementX * Math.sin(-this._r * (Math.PI / 180)) +
-          e.movementY * Math.cos(this._r * (Math.PI / 180));
-        this._x += (deltaX / this._factor);
-        this._y += (deltaY / this._factor);
+        this._translate(this._mx - oldX, this._my - oldY)
       } else {
         this._mouse = 'none';
         let ruller = canvas.querySelector('use#use-ruller');
         if (ruller instanceof SVGUseElement) {
           if (e.ctrlKey) {
-            ruller.setAttribute('x', e.offsetX - canvas.offsetLeft - 25 + '');
-            ruller.setAttribute('y', e.offsetY - canvas.offsetTop + '');
+            ruller.setAttribute('x', e.offsetX - 25 + '');
+            ruller.setAttribute('y', e.offsetY + '');
           } else {
             ruller.setAttribute('x', '0');
             ruller.setAttribute('y', canvas.clientHeight - 50 + '');
@@ -60,22 +74,30 @@ export class SVGEdit extends SVGView {
     }
   }
 
-  protected _scale(event: WheelEvent) {
+  protected _scale(f: number) {
+    this._factor += f;
+  }
+
+  protected _rotate(a: number) {
+    this._r += a;
+  }
+
+  protected _wheel(event: WheelEvent) {
     event.preventDefault();
-    let canvas = this.shadowRoot?.querySelector('div#canvas');
-    if (canvas instanceof HTMLDivElement) {
-      if (this._mouse !== 'none') return;
-      if (this.svgcontent) {
-        let UP = event.deltaY > 0 ? -1 : 1;
-        if (event.shiftKey) {
-          // ROTATE
-          let deltaR = (event.ctrlKey ? 1 : 5) * (UP);
-          let r = this._r + deltaR;
-          this._r = r;
-        } else {
-          // SCALE
-          this._factor = this._factor + (UP * (event.ctrlKey ? 0.005 : 0.05));
-        }
+    if (this._mouse !== 'none') return;
+    let canvas = event.currentTarget;
+    if (canvas instanceof SVGSVGElement) {
+      let UP = 0
+      if (event.deltaY > 0) UP = -1;
+      if (event.deltaY < 0) UP = 1;
+      if (event.shiftKey) {
+        // ROTATE
+        let deltaR = (event.ctrlKey ? 0.1 : 1) * (UP);
+        this._rotate(deltaR);
+      } else {
+        // SCALE
+        let factor = (UP * (event.ctrlKey ? 0.001 : 0.01));
+        this._scale(factor);
       }
     }
   }
@@ -146,8 +168,8 @@ export class SVGEdit extends SVGView {
   </fieldset>
   ${this._scaleRullerControl(this.gridscale, this.gridunit)}
   <fieldset class="tip">
-    Масштабувати: скрол (або скрол + control).
-    Обертати навколо центру: скрол + shift.
+    Масштабувати: скрол (повільно: control + скрол).
+    Обертати: shift + скрол (повільно: control + shift + скрол).
   </fieldset>`
   }
 
@@ -171,12 +193,6 @@ export class SVGEdit extends SVGView {
       </select>
     </label>
   </fieldset>`
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this.addEventListener('wheel', this._scale.bind(this));
-    this.addEventListener('mousemove', this._move.bind(this));
   }
 
   protected _ruller(unit: string, value: number, width: number = 250, topPos: number) {
@@ -215,29 +231,40 @@ export class SVGEdit extends SVGView {
     `;
   }
 
+  protected _saveToFile(data: FileChangeResult) {
+    this.dispatchEvent(
+      new CustomEvent<FileChangeResult>('file-changed', {
+        composed: true,
+        bubbles: true,
+        detail: data,
+      } as FileChangeEvent)
+    );
+  }
+
   protected updated(_changed: PropertyValueMap<SVGEdit>): void {
     super.updated(_changed);
+    if (_changed.has('svgcontent')) {
+      let container = this.svgCanvas();
+      if (container instanceof SVGSVGElement) {
+        container.addEventListener('wheel', this._wheel.bind(this));
+        container.addEventListener('mousemove', this._move.bind(this));
+      }
+    }
     if (_changed.has('_x')
       || _changed.has('_y')
       || _changed.has('_r')
       || _changed.has('aspect')
       || _changed.has('gridscale')
       || _changed.has('gridunit')) {
-      let container = this.shadowRoot?.querySelector('div#canvas');
+      let container = this.svgCanvas();
       if (container && this.svgcontent && this.fileAccessor) {
-        this.dispatchEvent(
-          new CustomEvent<FileChangeResult>('file-changed', {
-            composed: true,
-            bubbles: true,
-            detail: {
-              name: this.fileAccessor.file.name,
-              content: container.innerHTML,
-              options: {
-                type: 'image/svg+xml',
-              },
-            },
-          } as FileChangeEvent)
-        );
+        this._saveToFile({
+          name: this.fileAccessor.file.name,
+          content: container.outerHTML,
+          options: {
+            type: 'image/svg+xml',
+          },
+        });
       }
     }
   }

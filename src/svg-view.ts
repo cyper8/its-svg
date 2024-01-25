@@ -44,7 +44,7 @@ export class SVGView extends LitElement implements FileAccessCompatible {
         this.svgcontent = this._unwrap(this.svgcontent).innerHTML;
       }
     }
-    super.update(changedProperties);
+    super.willUpdate(changedProperties);
   }
 
   protected updated(_changed: PropertyValues<SVGView>) {
@@ -74,7 +74,7 @@ export class SVGView extends LitElement implements FileAccessCompatible {
     return html`<svg 
     id="container"
     class="itssvg"
-    style="aspect-ratio: ${this.aspect}"
+    style="aspect-ratio: ${this.aspect}; transform-origin: center center"
     viewBox="0 0 ${width} ${height}"
     xmlns="${xmlns}">${typeof content === 'string'
         ? unsafeSVG(content)
