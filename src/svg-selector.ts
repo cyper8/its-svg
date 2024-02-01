@@ -12,16 +12,21 @@ export type SVGSelectionEvent = CustomEvent<SVGSelectionResult> & {
   composed: true;
 }
 
+export function isSelectable(element: any): element is SVGElement {
+  return (
+    element instanceof SVGElement &&
+    !(element instanceof SVGSVGElement) &&
+    !(element.classList.contains('grid'))
+  )
+}
+
 export const getSelector = (element: Element | SVGElement) =>
   `${element.tagName.toLowerCase()}${element.classList
     .toString()
     .replace(' ', '.')}${element.id.length ? `#${element.id}` : ``}`;
 
-
-
 @customElement('svg-selector')
 export class SVGSelector extends SVGView {
-  protected _mouse: 'select' | 'none' = 'none';
   @property({ type: Object }) selection: Element | null = null;
   @state() _hovered: SVGElement | null = null;
   @state() _mx: number = 0;
@@ -74,26 +79,6 @@ export class SVGSelector extends SVGView {
     };
   }
 
-  protected _over(e: Event) {
-    e.preventDefault();
-    if (this.svgcontent) {
-      let target = e.target;
-      this._mx = (e as MouseEvent).offsetX;
-      this._my = (e as MouseEvent).offsetY;
-      if (
-        this._mouse === 'none' &&
-        target instanceof SVGElement &&
-        !target.classList.contains('grid') &&
-        !target.tagName.toLowerCase().includes('svg')
-      ) {
-        this._hovered = target;
-      } else {
-        this._hovered = null;
-      }
-    }
-  }
-
-
   protected _select(selection: SVGElement | null) {
     if (this.selection) this.selection.removeAttribute('selected');
     if (selection) {
@@ -102,26 +87,30 @@ export class SVGSelector extends SVGView {
     this.selection = selection;
   }
 
-  protected _press(_e: Event) {
-    _e.preventDefault();
-    this._mouse = 'select';
-  }
-
   protected _release(_e: Event) {
     let target = _e.target;
-    if (this._mouse === 'select') {
-      if (
-        target instanceof SVGElement &&
-        !target.hasAttribute('selected') &&
-        !target.classList.contains('grid') &&
-        !target.tagName.toLowerCase().includes('svg')
-      ) {
-        this._select(target);
-      } else {
-        this._select(null);
-      }
+    if (
+      isSelectable(target) &&
+      !target.hasAttribute('selected')
+    ) {
+      this._select(target);
+    } else {
+      this._select(null);
     }
-    this._mouse = 'none';
+  }
+
+  protected _move(e: MouseEvent) {
+    e.preventDefault();
+    let target = e.target;
+    this._mx = e.offsetX;
+    this._my = e.offsetY;
+    if (
+      isSelectable(target)
+    ) {
+      this._hovered = target;
+    } else {
+      this._hovered = null;
+    }
   }
 
   protected _clearSelectionControl(selection: string = '') {
@@ -129,18 +118,18 @@ export class SVGSelector extends SVGView {
       }>Очистити вибір: ${selection}</button></fieldset>`
   }
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    this.shadowRoot?.addEventListener('mousedown', this._press.bind(this));
-    this.shadowRoot?.addEventListener('mouseup', this._release.bind(this));
-    this.shadowRoot?.addEventListener('mousemove', this._over.bind(this));
-    this.shadowRoot?.addEventListener('mouseout', () => {
-      this._hovered = null;
-    });
-  }
-
   protected updated(_changed: PropertyValueMap<SVGSelector>): void {
     super.updated(_changed);
+    if (_changed.has('svgcontent')) {
+      let container = this.svgCanvas();
+      if (container instanceof SVGSVGElement) {
+        container.addEventListener('mouseup', this._release.bind(this));
+        container.addEventListener('mousemove', this._move.bind(this));
+        container.addEventListener('mouseout', () => {
+          this._hovered = null;
+        });
+      }
+    }
     if (_changed.has('selection')) {
       this.dispatchEvent((new CustomEvent<SVGSelectionResult>('svg-selection-changed', {
         composed: true,

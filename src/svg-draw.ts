@@ -213,7 +213,7 @@ export class SVGDraw extends SVGEdit {
   }
 
   render() {
-    return html`
+    return html`Work in progress!!! Experimental!!! May malfunction!!!
     ${super.render()}
     ${this._renderDrawControls()}
     `

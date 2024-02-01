@@ -9,7 +9,6 @@ const PORTRAIT = 210 / 297;
 
 @customElement('svg-edit')
 export class SVGEdit extends SVGView {
-  protected _mouse: 'move' | 'none' = 'none';
 
   @state() _mx: number = 0;
   @state() _my: number = 0;
@@ -32,8 +31,6 @@ export class SVGEdit extends SVGView {
     `
   ];
 
-  svgCanvas = () => this.shadowRoot?.querySelector<HTMLElement>('svg#container.itssvg');
-
   translateSystem([x, y]: [number, number]): [number, number] {
     let _x = x / this._factor,
       _y = y / this._factor;
@@ -49,17 +46,14 @@ export class SVGEdit extends SVGView {
 
   protected _move(e: MouseEvent) {
     e.preventDefault();
-    let oldX = this._mx,
-      oldY = this._my;
+    let oldX = this._mx,  oldY = this._my;
     this._mx = e.offsetX;
     this._my = e.offsetY;
-    let canvas = e.currentTarget;
-    if (canvas instanceof SVGSVGElement) {
-      if (e.buttons === 1) {
-        this._mouse = 'move';
-        this._translate(this._mx - oldX, this._my - oldY)
-      } else {
-        this._mouse = 'none';
+    if (e.buttons & 1) {
+      this._translate(this._mx - oldX, this._my - oldY)
+    } else {
+      let canvas = this.svgCanvas();
+      if (canvas instanceof SVGSVGElement) {
         let ruller = canvas.querySelector('use#use-ruller');
         if (ruller instanceof SVGUseElement) {
           if (e.ctrlKey) {
@@ -84,21 +78,17 @@ export class SVGEdit extends SVGView {
 
   protected _wheel(event: WheelEvent) {
     event.preventDefault();
-    if (this._mouse !== 'none') return;
-    let canvas = event.currentTarget;
-    if (canvas instanceof SVGSVGElement) {
-      let UP = 0
-      if (event.deltaY > 0) UP = -1;
-      if (event.deltaY < 0) UP = 1;
-      if (event.shiftKey) {
-        // ROTATE
-        let deltaR = (event.ctrlKey ? 0.1 : 1) * (UP);
-        this._rotate(deltaR);
-      } else {
-        // SCALE
-        let factor = (UP * (event.ctrlKey ? 0.001 : 0.01));
-        this._scale(factor);
-      }
+    let UP = 0
+    if (event.deltaY > 0) UP = -1;
+    if (event.deltaY < 0) UP = 1;
+    if (event.shiftKey) {
+      // ROTATE
+      let deltaR = (event.ctrlKey ? 0.1 : 1) * (UP);
+      this._rotate(deltaR);
+    } else {
+      // SCALE
+      let factor = (UP * (event.ctrlKey ? 0.001 : 0.01));
+      this._scale(factor);
     }
   }
 

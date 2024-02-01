@@ -38,6 +38,8 @@ export class SVGView extends LitElement implements FileAccessCompatible {
   `,
   ];
 
+  svgCanvas = () => this.shadowRoot?.querySelector<HTMLElement>('svg#container.itssvg');
+
   protected willUpdate(changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>): void {
     if (changedProperties.has('svgcontent')) {
       if (this.svgcontent) {
