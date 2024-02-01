@@ -78,17 +78,15 @@ export class SVGEdit extends SVGView {
 
   protected _wheel(event: WheelEvent) {
     event.preventDefault();
-    let UP = 0
-    if (event.deltaY > 0) UP = -1;
-    if (event.deltaY < 0) UP = 1;
+    const PRECISION = event.ctrlKey ? 0.1 : 1;
+    const DIRECTION = (event.deltaY > 0) ? -1
+    : (event.deltaY < 0) ? 1 : 0;
     if (event.shiftKey) {
       // ROTATE
-      let deltaR = (event.ctrlKey ? 0.1 : 1) * (UP);
-      this._rotate(deltaR);
+      this._rotate(PRECISION * DIRECTION);
     } else {
       // SCALE
-      let factor = (UP * (event.ctrlKey ? 0.001 : 0.01));
-      this._scale(factor);
+      this._scale(PRECISION * DIRECTION * 0.03);
     }
   }
 

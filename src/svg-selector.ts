@@ -1,5 +1,5 @@
 import { customElement, property, state } from "lit/decorators.js";
-import { SVGView } from "./svg-view.js";
+import { SVGEdit } from "./svg-edit.js";
 import { PropertyValueMap, TemplateResult, css, html, nothing } from "lit";
 
 export type SVGSelectionResult = {
@@ -26,11 +26,10 @@ export const getSelector = (element: Element | SVGElement) =>
     .replace(' ', '.')}${element.id.length ? `#${element.id}` : ``}`;
 
 @customElement('svg-selector')
-export class SVGSelector extends SVGView {
+export class SVGSelector extends SVGEdit {
   @property({ type: Object }) selection: Element | null = null;
   @state() _hovered: SVGElement | null = null;
-  @state() _mx: number = 0;
-  @state() _my: number = 0;
+  @state() _isEdit: boolean = false;
 
   static styles = [
     ...super.styles,
@@ -88,22 +87,25 @@ export class SVGSelector extends SVGView {
   }
 
   protected _release(_e: Event) {
-    let target = _e.target;
-    if (
-      isSelectable(target) &&
-      !target.hasAttribute('selected')
-    ) {
-      this._select(target);
+    if (!this._isEdit) {
+      let target = _e.target;
+      if (
+        isSelectable(target) &&
+        !target.hasAttribute('selected')
+      ) {
+        this._select(target);
+      } else {
+        this._select(null);
+      }
     } else {
-      this._select(null);
+      this._isEdit = false;
     }
   }
 
   protected _move(e: MouseEvent) {
-    e.preventDefault();
+    if (e.buttons & 1) this._isEdit = true;
+    super._move(e);
     let target = e.target;
-    this._mx = e.offsetX;
-    this._my = e.offsetY;
     if (
       isSelectable(target)
     ) {
@@ -124,7 +126,7 @@ export class SVGSelector extends SVGView {
       let container = this.svgCanvas();
       if (container instanceof SVGSVGElement) {
         container.addEventListener('mouseup', this._release.bind(this));
-        container.addEventListener('mousemove', this._move.bind(this));
+        // container.addEventListener('mousemove', this._move.bind(this));
         container.addEventListener('mouseout', () => {
           this._hovered = null;
         });
